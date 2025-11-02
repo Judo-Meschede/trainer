@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>URL-Update-Tool</title>
+<style>
+body{font-family:sans-serif;margin:2em;}
+input,button{padding:.5em;font-size:1em;}
+</style>
+<h1>Weiterleitungs-URL aktualisieren</h1>
+<p>Neue Ziel-URL eingeben und auf „Aktualisieren“ klicken:</p>
+<input id="url" type="url" placeholder="https://script.google.com/..." size="60">
+<button onclick="update()">URL aktualisieren</button>
+<p id="status"></p>
+<script>
+const user = "Judo-Meschede";       // dein GitHub-Username
+const repo = "trainer";              // dein Repo-Name
+const filePath = "index.html";       // die zu ändernde Datei
+const token = "DEIN_GITHUB_TOKEN";   // hier dein Token einfügen
+
+async function update(){
+  const newUrl = document.getElementById("url").value.trim();
+  if(!newUrl){alert("Bitte URL eingeben!");return;}
+
+  const status = document.getElementById("status");
+  status.textContent = "Lade aktuelle Datei…";
+
+  const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${filePath}`);
+  const data = await res.json();
+  const oldContent = atob(data.content);
+  const newContent = oldContent.replace(/https:\/\/script\.google\.com\/[^\"]+/g, newUrl);
+  const encoded = btoa(unescape(encodeURIComponent(newContent)));
+
+  status.textContent = "Sende Änderung…";
+  const updateRes = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${filePath}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `token ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: "URL automatisch aktualisiert",
+      content: encoded,
+      sha: data.sha
+    })
+  });
+
+  if(updateRes.ok){
+    status.textContent = "✅ URL wurde erfolgreich aktualisiert!";
+  } else {
+    const t = await updateRes.text();
+    status.textContent = "❌ Fehler: " + t;
+  }
+}
+</script>
+</html>
